@@ -4,13 +4,16 @@
     <meta charset="utf-8">
     <title>A-Frame Immersive Video Component - Basic</title>
     <meta name="description" content="Basic example for Immersive Video component."></meta>
-    <script src="https://aframe.io/releases/0.8.2/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="../../dist/aframe-immersive-video-component.js"></script>
   </head>
   <body>
     <a-scene antialias="true">
       <!--360 mono-->
-      <a-entity id="immersive-video" immersive-video="type: 360_mono; source:https://ucarecdn.com/fadab25d-0b3a-45f7-8ef5-85318e92a261/; theme: light" rotation="0 180 0"></a-entity>
+      <a-entity
+              id="immersive-video"
+              immersive-video="type: 360_mono; source:/aframe-immersive-video/TempleTour1-360.mp4; theme: light"
+              rotation="0 180 0"></a-entity>
 
     </a-scene>
 

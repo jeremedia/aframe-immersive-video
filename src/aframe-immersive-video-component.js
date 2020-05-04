@@ -10,6 +10,7 @@ if (typeof AFRAME === 'undefined') {
 AFRAME.registerComponent('immersive-video', {
   schema: {
       source: {type: 'string', default: ""},
+      media_format: {type:'string', default: "video"},
       type: {type: 'string', default: "360"},
       theme: {'type': 'string', default: "dark"},
       controls: {type: 'boolean', default: true},
@@ -29,24 +30,23 @@ AFRAME.registerComponent('immersive-video', {
 
         var self = this;
 
-        self.video_timestamp = Date.now();
+        self.media_timestamp = Date.now();
 
-        // Default types
+        // Default type
 
-        self.video_type = {'coverage': "full", 'stereo': false, 'split': 'horizontal'};
+        self.media_type = {'media_format': self.data.media_format, 'coverage': "full", 'stereo': false, 'split': 'horizontal'};
 
-        // Get types from type
 
-        if (self.data.type.includes('180')) self.video_type.coverage = "half";
+        if (self.data.type.includes('180')) self.media_type.coverage = "half";
 
-        if (self.data.type.includes('stereo')) self.video_type.stereo = true;
+        if (self.data.type.includes('stereo')) self.media_type.stereo = true;
 
-        if (self.data.type.includes('vertical')) self.video_type.split = 'vertical';
+        if (self.data.type.includes('vertical')) self.media_type.split = 'vertical';
 
 
         // ACTIVATE layer 1 (left eye) for camera on monoscopic view
 
-        if(self.video_type.stereo) {
+        if(self.media_type.stereo) {
 
             // Camera is non existent at this point. If wait for scene "loaded", still is undefined.
             // So, should wait for scene 'renderstart', set a flag and fire component 'update'
@@ -96,63 +96,77 @@ AFRAME.registerComponent('immersive-video', {
 
         // Set sky src to data.source
 
-            // If stereo video
+            // If stereo media
 
-            if (self.video_type.stereo) {
+            if (self.media_type.stereo) {
 
-                self.video_id = "stereo_video" + "_" + self.video_timestamp;
+                self.media_id = "stereo_media" + "_" + self.media_timestamp;
 
                 var scene = document.getElementsByTagName("a-scene")[0];
                 var assets = document.getElementsByTagName("a-assets")[0];
 
-                self.video = document.createElement("video");
+                if( self.media_type.media_format === "video" ){
+                    self.video = document.createElement("video");
 
-                self.video.setAttribute("src", self.data.source);
-                self.video.setAttribute("id", self.video_id);
-                self.video.setAttribute("loop", false);
-                self.video.setAttribute("autoplay", "true");
-                self.video.setAttribute("crossorigin", "anonymous");
+                    self.video.setAttribute("src", self.data.source);
+                    self.video.setAttribute("id", self.media_id);
+                    self.video.setAttribute("loop", false);
+                    self.video.setAttribute("autoplay", "true");
+                    self.video.setAttribute("crossorigin", "anonymous");
 
-                assets.appendChild(self.video);
+                    assets.appendChild(self.video);
+                }else if (self.media_type.media_format === "image"){
+
+                    self.image = document.createElement("img")
+                    self.image.setAttribute("id", self.media_id);
+                    self.image.setAttribute("src", self.data.source);
+                    self.image.setAttribute("crossorigin", "anonymous");
+
+                    assets.appendChild(self.image);
+
+                }
+
 
                 // Emit event for attaching to a menu or player from the outside
 
                 // console.log("EMITTING ASSET");
-                self.el.emit("asset_added", {'id': self.video_id}, false);
+                self.el.emit("asset_added", {'id': self.media_id}, false);
 
                 self.stereo_left_sphere = document.createElement("a-entity");
-                self.stereo_left_sphere.setAttribute("class", "videospheres");
+                self.stereo_left_sphere.setAttribute("class", "mediaspheres");
                 self.stereo_left_sphere.setAttribute("geometry", "primitive:sphere; radius:100; segmentsWidth: 64; segmentsHeight:64");
-                self.stereo_left_sphere.setAttribute("material", {shader: "flat", src: "#" + self.video_id, side: "back"});
+                self.stereo_left_sphere.setAttribute("material", {shader: "flat", src: "#" + self.media_id, side: "back"});
                 self.stereo_left_sphere.setAttribute("scale", "-1 1 1");
 
                 // Sync rotation with 'camera landing rotation'
 
                 self.stereo_left_sphere.setAttribute("rotation", {x:0, y: self.el.getAttribute("rotation").y, z:0});
 
-                AFRAME.utils.entity.setComponentProperty(self.stereo_left_sphere, "stereo", {'eye': 'left', 'mode': self.video_type.coverage, 'split': self.video_type.split});
+                AFRAME.utils.entity.setComponentProperty(self.stereo_left_sphere, "stereo", {'eye': 'left', 'mode': self.media_type.coverage, 'split': self.media_type.split});
 
                 self.el.appendChild(self.stereo_left_sphere);
 
                 self.stereo_right_sphere = document.createElement("a-entity");
 
-                self.stereo_right_sphere.setAttribute("class", "videospheres");
+                self.stereo_right_sphere.setAttribute("class", "mediaspheres");
 
                 self.stereo_right_sphere.setAttribute("geometry", "primitive:sphere; radius:100; segmentsWidth: 64; segmentsHeight:64");
-                self.stereo_right_sphere.setAttribute("material", {shader: "flat", src: "#" + self.video_id, side: "back"});
+                self.stereo_right_sphere.setAttribute("material", {shader: "flat", src: "#" + self.media_id, side: "back"});
                 self.stereo_right_sphere.setAttribute("scale", "-1 1 1");
 
 
                 self.stereo_right_sphere.addEventListener("materialvideoloadeddata", function(){
 
-                    self.el.emit("video_loaded", {'id': self.video_id}, false);
+                    self.el.emit("media_loaded", {'id': self.media_id}, false);
 
                 });
 
 
-                AFRAME.utils.entity.setComponentProperty(self.stereo_right_sphere, "stereo", {'eye': 'right', 'mode': self.video_type.coverage, 'split': self.video_type.split});
+                AFRAME.utils.entity.setComponentProperty(self.stereo_right_sphere, "stereo", {'eye': 'right', 'mode': self.media_type.coverage, 'split': self.media_type.split});
 
-                self.video.play();
+                if( self.media_type.media_format === "video" ) {
+                    self.video.play();
+                }
 
                 self.el.appendChild(self.stereo_right_sphere);
 
@@ -165,20 +179,36 @@ AFRAME.registerComponent('immersive-video', {
 
                 // console.log("MONO VIDEO");
 
-                self.video_id = "mono_video" + "_" + self.video_timestamp;
+                self.media_id = "stereo_media" + "_" + self.media_timestamp;
+
 
                 var scene = document.getElementsByTagName("a-scene")[0];
                 var assets = document.getElementsByTagName("a-assets")[0];
 
-                self.video = document.createElement("video");
 
-                self.video.setAttribute("src", self.data.source);
-                self.video.setAttribute("id", self.video_id);
-                self.video.setAttribute("loop", false);
-                self.video.setAttribute("autoplay", "true");
-                self.video.setAttribute("crossorigin", "anonymous");
 
-                assets.appendChild(self.video);
+                if( self.media_type.media_format === "video" ) {
+                    self.video = document.createElement("video");
+
+                    self.video.setAttribute("src", self.data.source);
+                    self.video.setAttribute("id", self.media_id);
+                    self.video.setAttribute("loop", false);
+                    self.video.setAttribute("autoplay", "true");
+                    self.video.setAttribute("crossorigin", "anonymous");
+
+
+                    assets.appendChild(self.video);
+
+                }else if (self.media_type.media_format === "image"){
+
+                        self.image = document.createElement("img")
+                        self.image.setAttribute("id", self.media_id);
+                        self.image.setAttribute("src", self.data.source);
+                        self.image.setAttribute("crossorigin", "anonymous");
+
+                        assets.appendChild(self.image);
+
+                }
 
                 // Emit event for attaching to a menu or player from the outside
 
@@ -186,10 +216,10 @@ AFRAME.registerComponent('immersive-video', {
 
                 self.mono_sphere = document.createElement("a-entity");
 
-                self.mono_sphere.setAttribute("class", "videospheres");
+                self.mono_sphere.setAttribute("class", "mediaspheres");
 
                 self.mono_sphere.setAttribute("geometry", "primitive:sphere; radius:100; segmentsWidth: 64; segmentsHeight:64");
-                self.mono_sphere.setAttribute("material", {shader: "flat", src: "#" + self.video_id, side: "back"});
+                self.mono_sphere.setAttribute("material", {shader: "flat", src: "#" + self.media_id, side: "back"});
                 self.mono_sphere.setAttribute("scale", "-1 1 1");
 
                 // console.log(self.mono_sphere.object3D);
@@ -197,12 +227,12 @@ AFRAME.registerComponent('immersive-video', {
 
                 self.mono_sphere.addEventListener("materialvideoloadeddata", function(){
 
-                    self.el.emit("video_loaded", {'id': self.video_id}, false);
+                    self.el.emit("media_loaded", {'id': self.media_id}, false);
 
                 });
 
 
-                self.video.play();
+                // self.video.play();
 
                 self.el.appendChild(self.mono_sphere);
 
@@ -250,21 +280,23 @@ AFRAME.registerComponent('stereo', {
 
         // Flag for video
 
-        this.material_is_a_video = false;
-
-        // Check if material is a video from html tag (object3D.material.map instanceof THREE.VideoTexture does not
-        // always work
-
-        if (this.el.getAttribute("material") !== null && 'src' in this.el.getAttribute("material") && this.el.getAttribute("material").src !== "") {
-            var src = this.el.getAttribute("material").src;
-
-            // If src is an object and its tagName is video...
-
-            if (typeof src === 'object' && ('tagName' in src && src.tagName === "VIDEO")) {
-                this.material_is_a_video = true;
-            }
-        }
-
+        // this.material_is_a_video = false;
+        //
+        // // Check if material is a video from html tag (object3D.material.map instanceof THREE.VideoTexture does not
+        // // always work
+        //
+        // if (this.el.getAttribute("material") !== null && 'src' in this.el.getAttribute("material") && this.el.getAttribute("material").src !== "") {
+        //     var src = this.el.getAttribute("material").src;
+        //
+        //     // If src is an object and its tagName is video...
+        //
+        //     if (typeof src === 'object' && ('tagName' in src && src.tagName === "VIDEO")) {
+        //         this.material_is_a_video = true;
+        //     }
+        // }
+        //
+        // this.material_is_a_video = true;
+        //
         var object3D = this.el.object3D.children[0];
 
         // In A-Frame 0.2.0, objects are all groups so sphere is the first children
@@ -277,7 +309,7 @@ AFRAME.registerComponent('stereo', {
             return object3D.geometry instanceof geometry;
         });
 
-        if (isValidGeometry && this.material_is_a_video) {
+        if (isValidGeometry) {
 
             // if half-dome mode, rebuild geometry (with default 100, radius, 64 width segments and 64 height segments)
 
